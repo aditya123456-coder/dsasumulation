@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree | DSA Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        /* --- Navbar & Modal Styles (Global) --- */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 0.8rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .navbar.compact {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #3b82f6;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .logo span {
+            color: #3b82f6;
+        }
+
+        /* Dropdown */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #0f172a;
+            min-width: 180px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.5rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: #1e293b;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal.active-modal {
+            display: block;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: #fff;
+        }
+
+        .modal-content {
+            padding: 1.5rem;
+            color: #cbd5e1;
+            line-height: 1.6;
+        }
+
+        /* --- 3D Visualization Specific Styles (Scoped) --- */
+        #visualization-wrapper {
+            position: relative;
+        }
+
+        #canvas-container {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background-color: #0f172a;
+            cursor: move;
+        }
+
+        /* UI Panel - Glass Theme */
+        .ui-panel {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 24px;
+            border-radius: 16px;
+            color: #e2e8f0;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 300px;
+            z-index: 10;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            max-height: calc(100% - 60px);
+            overflow-y: auto;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .ui-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .ui-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* Right Side Panel - AI Analysis */
+        .right-panel {
+            left: auto;
+            right: 20px;
+            width: 320px;
+            background: rgba(15, 23, 42, 0.85);
+            /* Slightly more opaque for text reading */
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+        }
+
+        .ai-content {
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 10px;
+        }
+
+        .ai-content p {
+            margin-bottom: 0.8rem;
+        }
+
+        .ai-content strong {
+            color: #3b82f6;
+        }
+
+        .ai-content ul {
+            padding-left: 1.2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .ai-content li {
+            margin-bottom: 0.4rem;
+        }
+
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #d946ef;
+            /* Pink */
+            font-size: 0.9rem;
+            padding: 20px;
+        }
+
+        /* Right Side Panel - Step-by-Step Log */
+        .right-panel {
+            left: auto;
+            right: 20px;
+            width: 280px;
+            background: rgba(15, 23, 42, 0.75);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .step-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .step-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            transition: all 0.3s ease;
+            position: relative;
+            padding-left: 16px;
+        }
+
+        .step-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: transparent;
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .step-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            color: #f8fafc;
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateX(-5px);
+        }
+
+        .step-item.active::before {
+            background: #3b82f6;
+        }
+
+        .step-item.future {
+            opacity: 0.5;
+        }
+
+        /* Custom Inputs & Buttons */
+        .control-group {
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 12px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        input,
+        select,
+        textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+            width: 100%;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #3b82f6;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        button.action-btn {
+            background: rgba(59, 130, 246, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            width: 100%;
+            backdrop-filter: blur(4px);
+        }
+
+        button.action-btn:hover {
+            background: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        button.btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: #cbd5e1;
+        }
+
+        button.btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        button.btn-danger {
+            background: rgba(239, 68, 68, 0.8);
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        button.btn-danger:hover {
+            background: #ef4444;
+        }
+
+        button.btn-ai {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border: none;
+        }
+
+        button.btn-ai:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Stats & Logs */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-box {
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+
+        .stat-label {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        #status-log {
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            height: 60px;
+            overflow-y: auto;
+            color: #cbd5e1;
+            border-left: 3px solid #3b82f6;
+        }
+
+        #ai-log {
+            margin-top: 8px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: #e2e8f0;
+            border-left: 3px solid #d946ef;
+            display: none;
+            line-height: 1.4;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .legend {
+            margin-top: 15px;
+            display: flex;
+            gap: 12px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #d946ef;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: #0f172a;
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #3b82f6;
+            font-size: 1.2rem;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        /* Timeline Controls - Relocated */
+        .timeline-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            padding: 12px 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 40;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .timeline-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: #e2e8f0;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .timeline-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            height: 4px;
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #0f172a;
+        }
+
+        .step-label {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .controls-container {
+                width: 90% !important;
+                left: 5% !important;
+                top: 60px !important;
+                max-height: 45vh !important;
+                padding: 15px !important;
+            }
+
+            .navbar {
+                flex-wrap: wrap;
+                padding: 0.5rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body class="text-white h-screen w-screen relative select-none">
+
+    <!-- Loading Screen -->
+    <div id="loading-overlay">Initializing 3D Engine...</div>
+
+    <!-- Compact Navbar -->
+    <nav class="navbar">
+        <a href="index.html" class="logo">
+            <i data-lucide="zap" class="w-6 h-6 text-blue-500"></i>
+            <span>DSA</span>Studio
+        </a>
+        <div class="hamburger" id="nav-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <!-- Centered Tools -->
+        <div class="nav-center">
+            <a href="#" onclick="closeModals(); return false;" class="nav-link">3D Model</a>
+            <a href="theory/theory6.html" onclick="openModal('')" class="nav-link">Theory</a>
+            <a href="quiz6.html" class="nav-link">Quiz</a>
+            <a href="programs.html?filter=tree" class="nav-link">Program</a>
+        </div>
+
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="topics.html" class="nav-link">Topics</a>
+            <a href="#" class="nav-link">About</a>
+        </div>
+    </nav>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="modal-overlay" onclick="if(event.target === this) closeModals()">
+        <div id="modal-theory" class="modal">
+            <div class="modal-header">
+                <h2>Tree Theory</h2><button class="close-modal" onclick="closeModals()">×</button>
+            </div>
+            <div class="modal-content">
+                <p>A Tree is a non-linear hierarchical data structure consisting of nodes connected by edges.</p>
+                <h3 class="text-white font-bold mt-4">Key Concepts:</h3>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                    <li><strong>Root:</strong> Top node in tree.</li>
+                    <li><strong>Parent/Child:</strong> Relationship between connected nodes.</li>
+                    <li><strong>Leaf:</strong> Node with no children.</li>
+                    <li><strong>BST:</strong> Left < Root < Right.</li>
+                    <li><strong>AVL:</strong> Self-balancing BST.</li>
+                </ul>
+            </div>
+        </div>
+        <div id="modal-quiz" class="modal">
+            <div class="modal-header">
+                <h2>Tree Quiz</h2><button class="close-modal" onclick="closeModals()">×</button>
+            </div>
+            <div class="modal-content">
+                <p class="font-semibold mb-4">Q1: Worst Case Search in BST?</p>
+                <button
+                    class="w-full text-left p-3 rounded bg-slate-800 hover:bg-green-500/30 transition border border-green-500/50 mb-2">A.
+                    O(n) (Correct)</button>
+                <button
+                    class="w-full text-left p-3 rounded bg-slate-800 hover:bg-blue-600/30 transition border border-slate-700">B.
+                    O(log n)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Wrapper -->
+    <div id="visualization-wrapper"
+        class="relative w-full h-[calc(100vh-6rem)] mt-24 border-t border-slate-700/50 shadow-2xl overflow-hidden">
+
+        <div id="canvas-container"></div>
+
+        <div class="timeline-container">
+            <div class="timeline-controls">
+                <button class="control-btn" onclick="animController.first()" title="First">
+                    <i data-lucide="skip-back" class="w-4 h-4"></i>
+                </button>
+                <button class="control-btn" onclick="animController.prev()" title="Previous">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                </button>
+                <button class="control-btn" onclick="animController.togglePlay()" id="btn-play-pause"
+                    title="Play/Pause">
+                    <i data-lucide="play" class="w-4 h-4"></i>
+                </button>
+                <button class="control-btn" onclick="animController.next()" title="Next">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                </button>
+                <button class="control-btn" onclick="animController.last()" title="Last">
+                    <i data-lucide="skip-forward" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <input type="range" id="timeline-slider" class="timeline-slider" min="0" max="0" value="0" step="1"
+                oninput="animController.scrub(this.value)">
+            <div class="step-label">Step <span id="current-step">0</span> / <span id="total-steps">0</span></div>
+        </div>
+
+        <div class="ui-panel" id="ui-content">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                <h1 class="text-lg font-bold text-blue-400">Tree Visualizer</h1>
+                <button onclick="toggleUI()"
+                    class="text-xs bg-slate-700 px-2 py-1 rounded text-gray-300 hover:text-white">Hide</button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-val" id="stat-height">0</div>
+                    <div class="stat-label">Height</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" id="stat-nodes">0</div>
+                    <div class="stat-label">Nodes</div>
+                </div>
+            </div>
+
+            <!-- AI Section -->
+            <div class="control-group">
+                <label style="color: #d946ef; display:flex; align-items:center; gap:4px;"><i data-lucide="sparkles"
+                        class="w-3 h-3"></i> Gemini AI</label>
+                <textarea id="ai-prompt" rows="2" placeholder="Ex: Insert 10, 20, 30 then search 20"></textarea>
+                <div class="btn-grid mt-2">
+                    <button class="action-btn btn-ai" onclick="runAISimulation()" id="btn-simulate">Simulate</button>
+                    <button class="action-btn btn-secondary" onclick="explainState()" id="btn-explain">Explain</button>
+                </div>
+                <div id="ai-log"></div>
+            </div>
+
+            <div class="control-group">
+                <label>Tree Type</label>
+                <select id="treeType" onchange="changeTreeType()">
+                    <option value="BST">Binary Search Tree (BST)</option>
+                    <option value="AVL">AVL Tree (Balanced)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Operations</label>
+                <input type="number" id="nodeValue" placeholder="Value..." onkeypress="handleEnter(event)">
+                <div class="btn-grid mt-1">
+                    <button class="action-btn" onclick="performInsert()">Insert</button>
+                    <button class="action-btn btn-danger" onclick="performDelete()">Delete</button>
+                </div>
+                <div class="btn-grid mt-1">
+                    <button class="action-btn btn-secondary" onclick="performSearch()">Search</button>
+                    <button class="action-btn btn-secondary" onclick="resetTree()">Clear</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Traversals</label>
+                <div class="btn-grid">
+                    <button class="action-btn btn-secondary" onclick="performTraversal('inorder')">InOrder</button>
+                    <button class="action-btn btn-secondary" onclick="performTraversal('preorder')">PreOrder</button>
+                </div>
+                <div class="btn-grid mt-1">
+                    <button class="action-btn btn-secondary" onclick="performTraversal('postorder')">PostOrder</button>
+                    <button class="action-btn btn-secondary"
+                        onclick="performTraversal('levelorder')">LevelOrder</button>
+                </div>
+                <div class="btn-grid mt-1">
+                    <button class="action-btn btn-secondary text-xs" onclick="findMinMax('min')">Find Min</button>
+                    <button class="action-btn btn-secondary text-xs" onclick="findMinMax('max')">Find Max</button>
+                </div>
+            </div>
+
+
+
+            <button class="action-btn btn-secondary mb-2" onclick="generateRandomTree()">Random Tree</button>
+
+            <div style="opacity: 0;" id="status-log"></div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="dot" style="background:#4facfe"></div>Node
+                </div>
+                <div class="legend-item">
+                    <div class="dot" style="background:#ffeb3b"></div>Scan
+                </div>
+                <div class="legend-item">
+                    <div class="dot" style="background:#ff416c"></div>Found
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Show Button -->
+        <button id="show-btn" onclick="toggleUI()"
+            class="absolute top-5 left-5 bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-white text-xs hidden hover:bg-slate-700">Show
+            Controls</button>
+
+        <!-- Right Side Panel: Step-by-Step Logic -->
+        <div class="ui-panel right-panel" id="step-panel">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                <h2 class="text-sm font-bold text-blue-400 uppercase tracking-wider">operation analysis</h2>
+            </div>
+            <div id="step-list" class="step-list">
+                <div class="step-item">Details of the operation will appear here step by step.</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+        // --- Configuration ---
+        const isMobile = () => window.innerWidth < 768;
+
+        // Colors (Matched to Theme)
+        const C_DEF = 0x3b82f6;   // Blue-500 - Default node
+        const C_ACT = 0xeab308;   // Yellow-500 - Active/Scanning
+        const C_VIS = 0x22c55e;   // Green-500 - Visited
+        const C_FND = 0xec4899;   // Pink-500 - Found
+        const C_MIN = 0x8b5cf6;   // Purple-500 - Min node
+        const C_MAX = 0xef4444;   // Red-500 - Max node
+        const C_EDGE = 0x94a3b8;  // Slate-400 - Edges
+
+        // --- Global Variables ---
+        let scene, camera, renderer, controls, font;
+        let rootNode = null;
+        let isAnimating = false;
+        let treeType = "BST";
+        let animationSpeed = 400; // ms per step
+
+        // TreeNode Class
+        class TreeNode {
+            constructor(val) {
+                this.value = val;
+                this.left = null;
+                this.right = null;
+                this.height = 1;
+                this.x = 0;
+                this.y = 0;
+                // Note: removed mesh/lbl/ln from here as they will be managed by Renderer
+            }
+        }
+        function appendOperationStep(index, message) {
+            if (!message) return;
+
+            const list = document.getElementById('step-list');
+            if (!list) return;
+
+            // Remove placeholder
+            if (list.children.length === 1 && list.children[0].textContent.includes("Details")) {
+                list.innerHTML = "";
+            }
+
+            const item = document.createElement('div');
+            item.className = 'step-item future';
+            item.id = `step-item-${index}`;
+            item.innerHTML = message;
+
+            list.appendChild(item);
+        }
+
+
+        // --- NEW: Animation Controller System ---
+
+        class AnimationController {
+            constructor() {
+                this.frames = [];
+                this.currentFrameIndex = 0;
+                this.isPlaying = false;
+                this.playInterval = null;
+                this.speed = 1000; // ms per step (slow for clarity)
+            }
+
+            // Called by simulation functions to add a new state
+            recordFrame(rootNode, highlights = {}, message = "", logToUI = true) {
+                // 1️⃣ Serialize current tree state
+                const treeSnapshot = this.serializeTree(rootNode);
+
+                // 2️⃣ Step index = current frame position
+                const stepIndex = this.frames.length;
+
+                // 3️⃣ Store frame data
+                this.frames.push({
+                    tree: treeSnapshot,
+                    highlights: { ...highlights },
+                    message: message,
+                    stepIndex: stepIndex
+                });
+
+                // 4️⃣ Add entry to Operation Log (right panel)
+                if (logToUI && message) {
+                    appendOperationStep(stepIndex, message);
+                }
+
+                // 5️⃣ Update timeline slider + counters
+                this.updateUISlider();
+            }
+
+
+            serializeTree(node) {
+                if (!node) return null;
+                return {
+                    value: node.value,  
+                    x: node.x,
+                    y: node.y,
+                    height: node.height,
+                    left: this.serializeTree(node.left),
+                    right: this.serializeTree(node.right)
+                };
+            }
+
+            reset() {
+                this.pause();
+                this.frames = [];
+                this.currentFrameIndex = 0;
+                this.updateUISlider();
+
+                const stepList = document.getElementById('step-list');
+                if (stepList) {
+                    stepList.innerHTML = '<div class="step-item">Details of the operation will appear here step by step.</div>';
+                }
+            }
+
+
+            // Removed generateStepList as we are using AI panel now
+            generateStepList() { }
+
+            startRecording() {
+                // If we are appending to existing state, we simulate "continuing"
+                // But usually we might want to capture the START state first if it's a new op
+                // For now, operations will just push frames.
+                // If we want to support "Undo" of entire operations later, we'd need multiple timelines.
+                // Current simplified model: One global timeline that appends.
+
+                // Correction: For "Playback" of an operation, it's best if the operation
+                // generates a localized sequence of frames (Animation Clip).
+                // BUT, to simplify "Previous Step" across the whole session, a global timeline is easier.
+                // Let's use a Global Timeline that keeps growing.
+            }
+
+            // Playback controls
+            updateUISlider() {
+                const slider = document.getElementById('timeline-slider');
+                const curStep = document.getElementById('current-step');
+                const totStep = document.getElementById('total-steps');
+
+                slider.max = Math.max(0, this.frames.length - 1);
+                slider.value = this.currentFrameIndex;
+
+                curStep.textContent = this.currentFrameIndex;
+                totStep.textContent = Math.max(0, this.frames.length - 1);
+            }
+
+            renderCurrentFrame() {
+                if (this.frames.length === 0) return;
+
+                const frame = this.frames[this.currentFrameIndex];
+
+                // Render the tree snapshot
+                renderFrame(frame.tree, frame.highlights);
+
+                // Update Log if needed (and we moved forward/packet has message)
+                // Note: scrubbing back might need to clear logs? 
+                // For simplicity: We only append logs when "Executing" existing logic. 
+                // In playback mode, maybe just show the message in a status div?
+                // Update Log if needed (and we moved forward/packet has message)
+                // Note: scrubbing back might need to clear logs? 
+                // For simplicity: We only append logs when "Executing" existing logic. 
+                // In playback mode, maybe just show the message in a status div?
+                if (frame.message) {
+                    // Update a specific status element instead of appending to log constantly during scrub
+                    document.getElementById('status-log').innerHTML = `<div>${frame.message}</div>`;
+                }
+
+                // NEW: Highlight the active step in the Right Panel
+                const listItems = document.querySelectorAll('.step-item');
+                listItems.forEach(item => {
+                    item.classList.remove('active');
+                    item.classList.add('future');
+                });
+
+                // Active item
+                const activeItem = document.getElementById(`step-item-${this.currentFrameIndex}`);
+                if (activeItem) {
+                    activeItem.classList.remove('future');
+                    activeItem.classList.add('active');
+                    
+                }
+
+                // Mark previous items as visited (not future)
+                for (let i = 0; i < this.currentFrameIndex; i++) {
+                    const prevItem = document.getElementById(`step-item-${i}`);
+                    if (prevItem) prevItem.classList.remove('future');
+                }
+
+                this.updateUISlider();
+            }
+
+            togglePlay() {
+                if (this.isPlaying) this.pause();
+                else this.play();
+            }
+
+            play() {
+                if (this.currentFrameIndex >= this.frames.length - 1) return; // At end
+
+                this.isPlaying = true;
+                const btn = document.getElementById('btn-play-pause');
+                if (btn) {
+                    btn.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
+                    lucide.createIcons();
+                }
+
+                this.playInterval = setInterval(() => {
+                    if (this.currentFrameIndex < this.frames.length - 1) {
+                        this.currentFrameIndex++;
+                        this.renderCurrentFrame();
+                    } else {
+                        this.pause();
+                    }
+                }, this.speed);
+            }
+
+            pause() {
+                this.isPlaying = false;
+                clearInterval(this.playInterval);
+                const btn = document.getElementById('btn-play-pause');
+                if (btn) {
+                    btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
+                    lucide.createIcons();
+                }
+            }
+
+            next() {
+                this.pause();
+                if (this.currentFrameIndex < this.frames.length - 1) {
+                    this.currentFrameIndex++;
+                    this.renderCurrentFrame();
+                }
+            }
+
+            prev() {
+                this.pause();
+                if (this.currentFrameIndex > 0) {
+                    this.currentFrameIndex--;
+                    this.renderCurrentFrame();
+                }
+            }
+
+            first() {
+                this.pause();
+                this.currentFrameIndex = 0;
+                this.renderCurrentFrame();
+            }
+
+            last() {
+                this.pause();
+                this.currentFrameIndex = this.frames.length - 1;
+                this.renderCurrentFrame();
+            }
+
+            scrub(val) {
+                this.pause();
+                this.currentFrameIndex = parseInt(val);
+                this.renderCurrentFrame();
+            }
+        }
+
+        const animController = new AnimationController();
+        window.animController = animController; // Expose to global
+
+        // --- NEW: Mesh Cache Renderer ---
+        const meshCache = new Map(); // value -> { mesh, lbl, ln }
+
+        function renderFrame(nodeSnapshot, highlights) {
+            const activeValues = new Set();
+
+            // Recursive Traverse to mark active nodes and update/create meshes
+            function traverse(node, parentSnapshot) {
+                if (!node) return;
+
+                const val = node.value;
+                activeValues.add(val);
+
+                let cache = meshCache.get(val);
+
+                // 1. Create Color based on highlights
+                // highlights is a map/object: value -> color
+                let color = C_DEF;
+                if (highlights && highlights[val] !== undefined) {
+                    color = highlights[val];
+                }
+
+                // 2. Create/Update Mesh
+                if (!cache) {
+                    // Create new Group for Node
+                    const geometry = new THREE.SphereGeometry(1.6, 32, 32);
+                    const material = new THREE.MeshStandardMaterial({
+                        color: color,
+                        roughness: 0.2,
+                        metalness: 0.2
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    scene.add(mesh);
+
+                    let lbl = null;
+                    if (font) {
+                        const textGeometry = new TextGeometry(String(val), {
+                            font: font,
+                            size: 0.7,
+                            height: 0.05
+                        });
+                        textGeometry.center();
+                        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                        lbl = new THREE.Mesh(textGeometry, textMaterial);
+                        scene.add(lbl);
+                    }
+
+                    cache = { mesh, lbl, ln: null };
+                    meshCache.set(val, cache);
+                }
+
+                // Update Props
+                // Smooth Lerp only if we are "playing", otherwise jump (for scrubbing)
+                // For simplicity, we just set position (the loop is managed by AnimController speed)
+                // But for smoothness, we can use lerp in the RequestAnimationFrame loop?
+                // No, let's just set position for now. The step-by-step is discrete.
+                cache.mesh.position.set(node.x, node.y, 0);
+                cache.mesh.material.color.setHex(color);
+                if (cache.lbl) {
+                    cache.lbl.position.set(node.x, node.y, 0).add(new THREE.Vector3(0, 0, 1.8));
+                }
+
+                // 3. Edges to Parent
+                if (parentSnapshot) {
+                    if (cache.ln) {
+                        scene.remove(cache.ln);
+                        cache.ln.geometry.dispose();
+                        cache.ln = null;
+                    }
+
+                    const start = new THREE.Vector3(parentSnapshot.x, parentSnapshot.y, 0);
+                    const end = new THREE.Vector3(node.x, node.y, 0);
+
+                    const direction = new THREE.Vector3().subVectors(end, start).normalize();
+                    const adjustedStart = start.clone().add(direction.clone().multiplyScalar(1.6));
+                    const adjustedEnd = end.clone().sub(direction.clone().multiplyScalar(1.6));
+
+                    const curve = new THREE.LineCurve3(adjustedStart, adjustedEnd);
+                    const tubeGeometry = new THREE.TubeGeometry(curve, 4, 0.1, 8, false);
+                    const tubeMaterial = new THREE.MeshBasicMaterial({ color: C_EDGE });
+
+                    cache.ln = new THREE.Mesh(tubeGeometry, tubeMaterial);
+                    scene.add(cache.ln);
+                } else {
+                    // Root or no parent, ensure no line
+                    if (cache.ln) {
+                        scene.remove(cache.ln);
+                        cache.ln.geometry.dispose();
+                        cache.ln = null;
+                    }
+                }
+
+                traverse(node.left, node);
+                traverse(node.right, node);
+            }
+
+            traverse(nodeSnapshot, null);
+
+            // Cleanup: Remove meshes not in activeValues
+            for (const [val, cache] of meshCache.entries()) {
+                if (!activeValues.has(val)) {
+                    scene.remove(cache.mesh);
+                    cache.mesh.geometry.dispose();
+                    cache.mesh.material.dispose();
+
+                    if (cache.lbl) {
+                        scene.remove(cache.lbl);
+                        cache.lbl.geometry.dispose();
+                        cache.lbl.material.dispose();
+                    }
+                    if (cache.ln) {
+                        scene.remove(cache.ln);
+                        cache.ln.geometry.dispose();
+                    }
+                    meshCache.delete(val);
+                }
+            }
+        }
+
+        // --- Initialization ---
+        function init() {
+            lucide.createIcons();
+            const container = document.getElementById('canvas-container');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.Fog(0x0f172a, 40, 150);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 10, isMobile() ? 70 : 50);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(20, 30, 20);
+            scene.add(directionalLight);
+
+            // Load Font
+            const loader = new FontLoader();
+            loader.load('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
+                font = loadedFont;
+                // Hide loading screen
+                document.getElementById('loading-overlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.display = 'none';
+                }, 500);
+                generateRandomTree();
+            });
+
+            // Animation Loop
+            animate();
+
+            // Resize Handler
+            window.addEventListener('resize', () => {
+                const container = document.getElementById('canvas-container');
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // --- Tree Operations ---
+
+        // Height & Balance Factor
+        function getHeight(node) {
+            return node ? node.height : 0;
+        }
+
+        function getBalanceFactor(node) {
+            return node ? (getHeight(node.left) - getHeight(node.right)) : 0;
+        }
+
+        // Rotations
+        function rotateRight(y) {
+            const x = y.left;
+            const T2 = x.right;
+
+            x.right = y;
+            y.left = T2;
+
+            y.height = Math.max(getHeight(y.left), getHeight(y.right)) + 1;
+            x.height = Math.max(getHeight(x.left), getHeight(x.right)) + 1;
+
+            return x;
+        }
+
+        function rotateLeft(x) {
+            const y = x.right;
+            const T2 = y.left;
+
+            y.left = x;
+            x.right = T2;
+
+            x.height = Math.max(getHeight(x.left), getHeight(x.right)) + 1;
+            y.height = Math.max(getHeight(y.left), getHeight(y.right)) + 1;
+
+            return y;
+        }
+
+        // Insert (BST & AVL)
+        function insertBST(node, value) {
+            if (!node) return new TreeNode(value);
+
+            if (value < node.value) {
+                node.left = insertBST(node.left, value);
+            } else if (value > node.value) {
+                node.right = insertBST(node.right, value);
+            }
+
+            return node;
+        }
+
+        function insertAVL(node, value) {
+            if (!node) return new TreeNode(value);
+
+            if (value < node.value) {
+                node.left = insertAVL(node.left, value);
+            } else if (value > node.value) {
+                node.right = insertAVL(node.right, value);
+            } else {
+                return node; // Duplicate values not allowed
+            }
+
+            // Update height
+            node.height = 1 + Math.max(getHeight(node.left), getHeight(node.right));
+
+            // Get balance factor
+            const balance = getBalanceFactor(node);
+
+            // Left Left Case
+            if (balance > 1 && value < node.left.value) {
+                return rotateRight(node);
+            }
+
+            // Right Right Case
+            if (balance < -1 && value > node.right.value) {
+                return rotateLeft(node);
+            }
+
+            // Left Right Case
+            if (balance > 1 && value > node.left.value) {
+                node.left = rotateLeft(node.left);
+                return rotateRight(node);
+            }
+
+            // Right Left Case
+            if (balance < -1 && value < node.right.value) {
+                node.right = rotateRight(node.right);
+                return rotateLeft(node);
+            }
+
+            return node;
+        }
+
+        // Find Min/Max Node
+        function findMinNode(node) {
+            let current = node;
+            while (current && current.left) {
+                current = current.left;
+            }
+            return current;
+        }
+
+        function findMaxNode(node) {
+            let current = node;
+            while (current && current.right) {
+                current = current.right;
+            }
+            return current;
+        }
+
+        // Delete (BST & AVL)
+        function deleteNode(node, value, type) {
+            if (!node) return node;
+
+            if (value < node.value) {
+                node.left = deleteNode(node.left, value, type);
+            } else if (value > node.value) {
+                node.right = deleteNode(node.right, value, type);
+            } else {
+                // Node found
+                if (!node.left || !node.right) {
+                    // One child or no child
+                    const temp = node.left ? node.left : node.right;
+                    if (!temp) {
+                        node = null;
+                    } else {
+                        node = temp;
+                    }
+                } else {
+                    // Two children
+                    const temp = findMinNode(node.right);
+                    node.value = temp.value;
+                    node.right = deleteNode(node.right, temp.value, type);
+                }
+            }
+
+            if (!node) return node;
+
+            if (type === 'AVL') {
+                // Update height
+                node.height = 1 + Math.max(getHeight(node.left), getHeight(node.right));
+
+                // Get balance factor
+                const balance = getBalanceFactor(node);
+
+                // Balance the tree
+                if (balance > 1 && getBalanceFactor(node.left) >= 0) {
+                    return rotateRight(node);
+                }
+
+                if (balance > 1 && getBalanceFactor(node.left) < 0) {
+                    node.left = rotateLeft(node.left);
+                    return rotateRight(node);
+                }
+
+                if (balance < -1 && getBalanceFactor(node.right) <= 0) {
+                    return rotateLeft(node);
+                }
+
+                if (balance < -1 && getBalanceFactor(node.right) > 0) {
+                    node.right = rotateRight(node.right);
+                    return rotateLeft(node);
+                }
+            }
+
+            return node;
+        }
+
+        // Update Node Positions (Tree Layout)
+        function updatePositions(node, depth = 0, offset = 0, spread = 35) {
+            if (!node) return;
+            node.y = 10 - (depth * 5);
+            node.x = offset;
+
+            const newSpread = Math.max(spread / 2, 2.5);
+
+            updatePositions(node.left, depth + 1, offset - newSpread, newSpread);
+            updatePositions(node.right, depth + 1, offset + newSpread, newSpread);
+        }
+
+        // --- Rendering ---
+
+        // Render Tree (Legacy Wrapper for manual calls if any, or just empty as we replaced it)
+        // We will remove the old renderTree/clearTreeFromScene functions as they are replaced by AnimationSystem
+
+        // --- UI Operations ---
+
+        // Helper Functions
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        function highlightNode(node, color) {
+            if (node && node.mesh) {
+                node.mesh.material.color.setHex(color);
+            }
+        }
+        function resetNodeColors(node) {
+            if (!node) return;
+            highlightNode(node, C_DEF);
+            resetNodeColors(node.left);
+            resetNodeColors(node.right);
+        }
+        function logMessage(message) {
+            const logElement = document.getElementById('status-log');
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            logElement.innerHTML = `<div>[${timestamp}] ${message}</div>` + logElement.innerHTML;
+        }
+
+        function updateStats() {
+            function calculateHeight(node) {
+                return node ? 1 + Math.max(calculateHeight(node.left), calculateHeight(node.right)) : 0;
+            }
+
+            function countNodes(node) {
+                return node ? 1 + countNodes(node.left) + countNodes(node.right) : 0;
+            }
+
+            const height = calculateHeight(rootNode);
+            const nodeCount = countNodes(rootNode);
+
+            document.getElementById('stat-height').textContent = height;
+            document.getElementById('stat-nodes').textContent = nodeCount;
+        }
+
+        // Insert Operation
+        window.performInsert = (valueOverride = null) => {
+            const value = valueOverride !== null ? parseInt(valueOverride) : parseInt(document.getElementById('nodeValue').value);
+            if (isNaN(value)) {
+                // logMessage("Please enter a valid number"); // TODO: Use status div?
+                alert("Please enter a valid number");
+                return;
+            }
+
+            animController.reset(); // clear timeline for new op
+            animController.startRecording();
+
+            // Record Start
+            animController.recordFrame(rootNode, {}, `Starting insertion of ${value}`);
+
+            // Visualize insertion path
+            let current = rootNode;
+            let parent = null;
+            // We need to simulate the path finding on the EXISTING tree structure first
+            // Note: The structure won't change until we actually insert.
+
+            while (current) {
+                // Highlight current
+                animController.recordFrame(rootNode, { [current.value]: C_ACT }, `Comparing ${value} with ${current.value}`);
+
+                if (value < current.value) {
+                    current = current.left;
+                } else if (value > current.value) {
+                    current = current.right;
+                } else {
+                    animController.recordFrame(rootNode, { [current.value]: C_FND }, `Value ${value} already exists`);
+                    animController.play();
+                    return;
+                }
+            }
+
+            // Perform insertion (Logic)
+            if (treeType === 'BST') {
+                rootNode = insertBST(rootNode, value);
+            } else {
+                rootNode = insertAVL(rootNode, value);
+            }
+
+            // Update Layout
+            updatePositions(rootNode, 0, 0, isMobile() ? 22 : 35);
+
+            // Record Final State
+            animController.recordFrame(rootNode, { [value]: C_VIS }, `Inserted ${value}`); // Use value as key for new node highlight
+
+            // Clear input
+            if (!valueOverride) {
+                document.getElementById('nodeValue').value = "";
+            }
+
+            updateStats();
+            updateStats();
+            updateStats();
+            // animController.generateStepList(); 
+            animController.play();
+            triggerAutoExplanation('Insertion', value);
+        };
+
+        // Delete Operation
+        window.performDelete = (valueOverride = null) => {
+            const value = valueOverride !== null ? parseInt(valueOverride) : parseInt(document.getElementById('nodeValue').value);
+            if (isNaN(value)) {
+                alert("Please enter a valid number");
+                return;
+            }
+
+            // Check if value exists first (optional, but good for UI)
+            let current = rootNode;
+            let found = false;
+            while (current) {
+                if (current.value === value) { found = true; break; }
+                current = value < current.value ? current.left : current.right;
+            }
+
+            if (!found) {
+                alert(`Value ${value} not found`);
+                return;
+            }
+
+            animController.reset();
+            animController.startRecording();
+            animController.recordFrame(rootNode, {}, `Starting deletion of ${value}`);
+
+            // Simulate Search Path for Deletion
+            current = rootNode;
+            while (current && current.value !== value) {
+                animController.recordFrame(rootNode, { [current.value]: C_ACT }, `Searching for ${value}...`);
+                current = value < current.value ? current.left : current.right;
+            }
+
+            if (current) {
+                animController.recordFrame(rootNode, { [current.value]: C_MAX }, `Found ${value}. Deleting...`);
+            }
+
+            // Perform deletion
+            rootNode = deleteNode(rootNode, value, treeType);
+
+            updatePositions(rootNode, 0, 0, isMobile() ? 22 : 35);
+
+            animController.recordFrame(rootNode, {}, `Deleted ${value}`);
+            updateStats();
+            animController.recordFrame(rootNode, {}, `Deleted ${value}`);
+            updateStats();
+            // animController.generateStepList();
+            animController.play();
+            triggerAutoExplanation('Deletion', value);
+        };
+
+        // Search Operation
+        window.performSearch = (valueOverride = null) => {
+            const value = valueOverride !== null ? parseInt(valueOverride) : parseInt(document.getElementById('nodeValue').value);
+            if (isNaN(value)) {
+                alert("Please enter a valid number");
+                return;
+            }
+
+            animController.reset();
+            animController.startRecording();
+            animController.recordFrame(rootNode, {}, `Searching for ${value}...`);
+
+            let current = rootNode;
+            let found = false;
+
+            while (current) {
+                animController.recordFrame(rootNode, { [current.value]: C_ACT }, `Checking ${current.value}...`);
+
+                if (current.value === value) {
+                    found = true;
+                    animController.recordFrame(rootNode, { [current.value]: C_FND }, `Found ${value}!`);
+                    break;
+                }
+
+                animController.recordFrame(rootNode, { [current.value]: C_VIS }, `Passed ${current.value}`);
+                current = value < current.value ? current.left : current.right;
+            }
+
+            if (!found) {
+                animController.recordFrame(rootNode, {}, `${value} not found`);
+            }
+
+            animController.play();
+            triggerAutoExplanation('Search', value);
+        };
+
+        // Traversal Operations
+        window.performTraversal = (type) => {
+            if (!rootNode) return;
+
+            animController.reset();
+            animController.startRecording();
+            animController.recordFrame(rootNode, {}, `Starting ${type} traversal`);
+
+            const nodes = [];
+
+            // Helper to collect nodes in order
+            // We want to animate them one by one.
+            // Actually, we should probably record the traversal logic step-by-step 
+            // but for simplicity, let's just collect the order and then animate the "visiting".
+
+            switch (type) {
+                case 'inorder':
+                    (function inorder(node) {
+                        if (node) {
+                            inorder(node.left);
+                            nodes.push(node.value);
+                            inorder(node.right);
+                        }
+                    })(rootNode);
+                    break;
+                case 'preorder':
+                    (function preorder(node) {
+                        if (node) {
+                            nodes.push(node.value);
+                            preorder(node.left);
+                            preorder(node.right);
+                        }
+                    })(rootNode);
+                    break;
+                case 'postorder':
+                    (function postorder(node) {
+                        if (node) {
+                            postorder(node.left);
+                            postorder(node.right);
+                            nodes.push(node.value);
+                        }
+                    })(rootNode);
+                    break;
+                case 'levelorder':
+                    const queue = [rootNode];
+                    while (queue.length > 0) {
+                        const node = queue.shift();
+                        if (node) {
+                            nodes.push(node.value);
+                            if (node.left) queue.push(node.left);
+                            if (node.right) queue.push(node.right);
+                        }
+                    }
+                    break;
+            }
+
+            // Generate frames for each visited node
+            const visitedSet = {}; // To keep visited nodes green? Or just highlight active?
+            // Let's accumulate visited nodes in green.
+
+            nodes.forEach((val, idx) => {
+                const highlights = { ...visitedSet };
+                highlights[val] = C_ACT; // Current active
+                animController.recordFrame(rootNode, highlights, `${type}: ${val}`);
+
+                visitedSet[val] = C_VIS; // Mark as visited for next frames
+            });
+
+            // Final frame
+            animController.recordFrame(rootNode, visitedSet, `${type} traversal complete`);
+            // Final frame
+            animController.recordFrame(rootNode, visitedSet, `${type} traversal complete`);
+            // animController.generateStepList();
+            animController.play();
+            triggerAutoExplanation('Traversal', type);
+        };
+
+        // Find Min/Max
+        window.findMinMax = (type) => {
+            if (!rootNode) return;
+
+            animController.reset();
+            animController.startRecording();
+            animController.recordFrame(rootNode, {}, `Finding ${type}...`);
+
+            let current = rootNode;
+            while (current) {
+                animController.recordFrame(rootNode, { [current.value]: C_ACT }, `Checking ${current.value}`);
+
+                if (type === 'min') {
+                    if (!current.left) {
+                        animController.recordFrame(rootNode, { [current.value]: C_MIN }, `Found Minimum: ${current.value}`);
+                        break;
+                    }
+                    current = current.left;
+                } else {
+                    if (!current.right) {
+                        animController.recordFrame(rootNode, { [current.value]: C_MAX }, `Found Maximum: ${current.value}`);
+                        break;
+                    }
+                    current = current.right;
+                }
+            }
+            animController.play();
+        };
+
+        // Generate Random Tree
+        window.generateRandomTree = () => {
+            // Instant generation, no timeline animation of insertion process
+            animController.reset();
+
+            rootNode = null;
+            const values = new Set();
+            const count = Math.floor(Math.random() * 5) + 8; // 8-12 nodes
+
+            while (values.size < count) {
+                values.add(Math.floor(Math.random() * 90) + 10);
+            }
+
+            Array.from(values).forEach(value => {
+                if (treeType === 'BST') {
+                    rootNode = insertBST(rootNode, value);
+                } else {
+                    rootNode = insertAVL(rootNode, value);
+                }
+            });
+
+            updatePositions(rootNode, 0, 0, isMobile() ? 22 : 35);
+            updateStats();
+
+            // Just show one frame
+            animController.recordFrame(rootNode, {}, `Generated random tree with ${count} nodes`);
+            // No play() needed as we just want to see it.
+            // Actually, we must execute renderCurrentFrame manually because recordFrame updates index/slider
+            // but doesn't necessarily render? 
+            // recordFrame pushes to frames. We should render the last frame.
+            animController.generateStepList();
+            animController.last();
+        };
+
+        // Reset Tree
+        window.resetTree = () => {
+            animController.reset();
+            rootNode = null;
+            updateStats();
+            animController.recordFrame(null, {}, "Tree cleared");
+            // animController.generateStepList();
+            animController.renderCurrentFrame();
+            updateAIPanel("Tree Cleared.");
+        };
+
+        // Change Tree Type
+        window.changeTreeType = () => {
+            treeType = document.getElementById('treeType').value;
+            const currentTree = [];
+            function collectValues(node) {
+                if (node) {
+                    collectValues(node.left);
+                    currentTree.push(node.value);
+                    collectValues(node.right);
+                }
+            }
+            collectValues(rootNode);
+
+            // Rebuild
+            rootNode = null;
+            currentTree.forEach(value => {
+                if (treeType === 'BST') {
+                    rootNode = insertBST(rootNode, value);
+                } else {
+                    rootNode = insertAVL(rootNode, value);
+                }
+            });
+
+            updatePositions(rootNode, 0, 0, isMobile() ? 22 : 35);
+            updateStats();
+
+            animController.reset();
+            animController.recordFrame(rootNode, {}, `Switched to ${treeType}`);
+            animController.generateStepList();
+            animController.last();
+        };
+
+        // Handle Enter Key
+        window.handleEnter = (e) => {
+            if (e.key === 'Enter') {
+                window.performInsert();
+            }
+        };
+
+        // --- GEMINI AI INTEGRATION (Fixed similar to array.html) ---
+
+        async function callGeminiAPI(userPrompt) {
+            // Get current tree state
+            const treeValues = [];
+            function collectTreeValues(node) {
+                if (node) {
+                    collectTreeValues(node.left);
+                    treeValues.push(node.value);
+                    collectTreeValues(node.right);
+                }
+            }
+            collectTreeValues(rootNode);
+
+            const stateData = {
+                treeType: treeType,
+                values: treeValues,
+                height: document.getElementById('stat-height').textContent,
+                nodeCount: document.getElementById('stat-nodes').textContent
+            };
+
+            const systemPrompt = `You are an AI assistant for a 3D Tree Visualizer. Analyze the user request and return a JSON response with:
+1. Explanation of what will happen
+2. List of commands to execute
+
+Current State:
+- Tree Type: ${stateData.treeType}
+- Node Count: ${stateData.nodeCount}
+- Tree Height: ${stateData.height}
+- Node Values: ${JSON.stringify(stateData.values)}
+
+Available Commands:
+- insert(value): Insert value into tree
+- delete(value): Delete value from tree
+- search(value): Search for value
+- traversal(type): Perform traversal (inorder, preorder, postorder, levelorder)
+- findMin(): Find minimum value
+- findMax(): Find maximum value
+- reset(): Clear the tree
+- random(): Generate random tree
+
+IMPORTANT: Return ONLY JSON in this format:
+{
+    "explanation": "Brief explanation here",
+    "commands": [
+        {"cmd": "commandName", "args": [arg1, arg2, ...]}
+    ]
+}`;
+
+            try {
+                // Try to connect to backend (same as array.html)
+                const response = await fetch("/api/gemini", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        userPrompt,
+                        systemPrompt
+                    })
+                });
+
+                if (!response.ok) {
+                    console.warn("Backend not available, using fallback.");
+                    return getFallbackResponse(userPrompt, stateData);
+                }
+
+                const data = await response.json();
+                console.log("Backend response:", data);
+
+                // Parse response - handle different formats
+                let parsedData;
+                if (typeof data === 'string') {
+                    parsedData = JSON.parse(data);
+                } else if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    parsedData = JSON.parse(text);
+                } else {
+                    parsedData = data;
+                }
+
+                return parsedData;
+
+            } catch (error) {
+                console.warn("Connection error, using fallback response.");
+                return getFallbackResponse(userPrompt, stateData);
+            }
+        }
+
+        function getFallbackResponse(userPrompt, stateData) {
+            const prompt = userPrompt.toLowerCase();
+
+            // Simple fallback parser similar to array.html
+            if (prompt.includes('insert') || prompt.includes('add')) {
+                const values = extractAllNumbers(prompt);
+                const commands = values.map(val => ({ "cmd": "insert", "args": [val] }));
+                return {
+                    explanation: `**Insert Operation**: Inserting values ${values.join(', ')} into the ${stateData.treeType}.`,
+                    commands: commands
+                };
+            } else if (prompt.includes('search') || prompt.includes('find')) {
+                const value = extractNumber(prompt) || 42;
+                return {
+                    explanation: `**Search Operation**: Searching for value ${value} in the tree.`,
+                    commands: [{ "cmd": "search", "args": [value] }]
+                };
+            } else if (prompt.includes('delete') || prompt.includes('remove')) {
+                const value = extractNumber(prompt) || stateData.values[0] || 50;
+                return {
+                    explanation: `**Delete Operation**: Removing value ${value} from the tree.`,
+                    commands: [{ "cmd": "delete", "args": [value] }]
+                };
+            } else if (prompt.includes('traversal') || prompt.includes('traverse')) {
+                const types = ['inorder', 'preorder', 'postorder', 'levelorder'];
+                const type = types.find(t => prompt.includes(t)) || 'inorder';
+                return {
+                    explanation: `**Traversal Operation**: Performing ${type} traversal of the tree.`,
+                    commands: [{ "cmd": "traversal", "args": [type] }]
+                };
+            } else if (prompt.includes('min') || prompt.includes('minimum')) {
+                return {
+                    explanation: `**Find Minimum**: Finding the minimum value in the tree.`,
+                    commands: [{ "cmd": "findMin", "args": [] }]
+                };
+            } else if (prompt.includes('max') || prompt.includes('maximum')) {
+                return {
+                    explanation: `**Find Maximum**: Finding the maximum value in the tree.`,
+                    commands: [{ "cmd": "findMax", "args": [] }]
+                };
+            } else if (prompt.includes('reset') || prompt.includes('clear')) {
+                return {
+                    explanation: `**Reset Operation**: Clearing the entire tree.`,
+                    commands: [{ "cmd": "reset", "args": [] }]
+                };
+            } else if (prompt.includes('random')) {
+                return {
+                    explanation: `**Random Tree**: Generating a new random tree.`,
+                    commands: [{ "cmd": "random", "args": [] }]
+                };
+            }
+
+            // Default explanation for state
+            return {
+                explanation: `**Current State**: ${stateData.treeType} Tree with ${stateData.nodeCount} nodes, height ${stateData.height}. Values: ${stateData.values.join(', ')}.`,
+                commands: []
+            };
+        }
+
+        function extractNumber(text) {
+            const match = text.match(/\d+/);
+            return match ? parseInt(match[0]) : null;
+        }
+
+        function extractAllNumbers(text) {
+            const matches = text.match(/\d+/g);
+            return matches ? matches.map(Number) : [];
+        }
+
+        async function executeAICommands(commandList) {
+            if (!commandList || !Array.isArray(commandList)) {
+                console.error("Invalid command list:", commandList);
+                return;
+            }
+
+            // Simple execution: reset controller between commands or queue them?
+            // queueing is better for "simulate" feel.
+
+            // For now, execute one by one.
+            for (const item of commandList) {
+                const { cmd, args } = item;
+                console.log("Executing:", cmd, "with args:", args);
+
+                try {
+                    switch (cmd) {
+                        case 'insert':
+                            performInsert(args[0]);
+                            // Wait for animation equivalent? 
+                            // performInsert is synchronous in logic, but async in playback.
+                            // AI Simulation typically wants to just DO it or queue the animations.
+                            // Since we use the same controller, rapid firing might override.
+                            // We should probably chain them?
+                            // But performInsert resets logic.
+                            // Let's assume user sends one major command mostly.
+                            // Or we can modify performInsert to NOT reset if appendMode is on.
+                            break;
+                        case 'delete':
+                            performDelete(args[0]);
+                            break;
+                        case 'search':
+                            performSearch(args[0]);
+                            break;
+                        case 'traversal':
+                            performTraversal(args[0]);
+                            break;
+                        case 'reset':
+                            resetTree();
+                            break;
+                        case 'findMin':
+                            findMinMax('min');
+                            break;
+                        case 'findMax':
+                            findMinMax('max');
+                            break;
+                        case 'random':
+                            generateRandomTree();
+                            break;
+                    }
+
+                    // Simple hack: wait a bit before next command if multiple
+                    await sleep(1000);
+
+                } catch (e) {
+                    console.error("Error executing command:", e);
+                }
+            }
+        }
+
+        // --- AI Functions ---
+
+        // Run AI Simulation
+        window.runAISimulation = async () => {
+            const prompt = document.getElementById('ai-prompt').value.trim();
+            if (!prompt) {
+                logMessage("Please enter an AI prompt");
+                return;
+            }
+
+            const btn = document.getElementById('btn-simulate');
+            const originalText = btn.textContent;
+            btn.textContent = "Processing...";
+            btn.disabled = true;
+
+            const aiLog = document.getElementById('ai-log');
+            aiLog.style.display = 'block';
+            aiLog.innerHTML = '<div class="loader"></div> Analyzing prompt...';
+
+            try {
+                const aiResult = await callGeminiAPI(prompt);
+
+                if (!aiResult) {
+                    aiLog.innerHTML = "❌ AI response error";
+                    return;
+                }
+
+                // Show explanation
+                const formattedExplanation = (aiResult.explanation || "").replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                aiLog.innerHTML = `💡 ${formattedExplanation}`;
+
+                if (aiResult.commands && aiResult.commands.length > 0) {
+                    // Update Panel instead of log
+                    updateAIPanel(aiResult.explanation);
+                    await executeAICommands(aiResult.commands);
+                }
+
+            } catch (error) {
+                console.error("AI Simulation Error:", error);
+                updateAIPanel("❌ Error processing request");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                // Don't hide the small log, maybe just clear it or repurpose
+                setTimeout(() => {
+                    // aiLog.style.display = 'none'; // Keep it hidden or remove it
+                }, 5000);
+            }
+        };
+
+        // Explain Current State
+        window.explainState = async () => {
+            const btn = document.getElementById('btn-explain');
+            const originalText = btn.textContent;
+            btn.textContent = "Analyzing...";
+            btn.disabled = true;
+
+            updateAIPanelLoading();
+
+            try {
+                const explanationCmd = "Explain the current state of the tree data structure and the last operation performed.";
+                const aiResult = await callGeminiAPI(explanationCmd);
+
+                if (aiResult && aiResult.explanation) {
+                    updateAIPanel(aiResult.explanation);
+                } else {
+                    updateAIPanel("❌ Could not generate explanation");
+                }
+
+            } catch (error) {
+                updateAIPanel("❌ Could not generate explanation");
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        // Helper to update AI Panel
+        function updateAIPanel(htmlContent) {
+            const panel = document.getElementById('ai-log');
+            const formatted = htmlContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+            panel.innerHTML = formatted;
+        }
+
+        function updateAIPanelLoading() {
+            const panel = document.getElementById('ai-log');
+            panel.innerHTML = '<div class="ai-loading"><div class="loader"></div> Gemini is thinking...</div>';
+        }
+
+        window.clearAI = () => {
+            document.getElementById('ai-log').innerHTML = '<div class="text-slate-500 text-center mt-10"><p>Ask Gemini to simulate an operation or use the controls to see AI explanation.</p></div>';
+        };
+
+        // Auto-Trigger AI for Manual Operations
+        async function triggerAutoExplanation(operation, value) {
+            // updateAIPanelLoading(); // Maybe too intrusive? Let's try it.
+            // Actually, let's show a "Scanning..." small text or just do it.
+            // The user wants AI analysis.
+            updateAIPanelLoading();
+            const prompt = `Explain the ${operation} operation of value ${value} on this ${treeType} tree. Describe the steps taken in simple words.`;
+            try {
+                const aiResult = await callGeminiAPI(prompt);
+                if (aiResult && aiResult.explanation) {
+                    updateAIPanel(aiResult.explanation);
+                }
+            } catch (e) {
+                console.error("Auto AI Error", e);
+            }
+        }
+
+        // --- UI Controls ---
+
+        // Toggle UI Panel
+        window.toggleUI = () => {
+            const panel = document.getElementById('ui-content');
+            const showBtn = document.getElementById('show-btn');
+
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                panel.style.display = 'block';
+                showBtn.classList.add('hidden');
+            } else {
+                panel.style.display = 'none';
+                showBtn.classList.remove('hidden');
+            }
+        };
+
+        // Modal Functions
+        window.openModal = (type) => {
+            document.getElementById('modal-overlay').classList.add('active');
+            document.getElementById('modal-' + type).classList.add('active-modal');
+        };
+
+        window.closeModals = () => {
+            document.getElementById('modal-overlay').classList.remove('active');
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active-modal');
+            });
+        };
+
+        // Mobile Nav Toggle
+        const navToggle = document.getElementById('nav-toggle');
+        const navLinks = document.querySelector('.nav-links');
+        if (navToggle && navLinks) {
+            navToggle.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+                navToggle.classList.toggle('active');
+            });
+        }
+
+        // Navbar Compact Effect
+        setTimeout(() => {
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                navbar.classList.add('compact');
+            }
+        }, 100);
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+
+</html>
